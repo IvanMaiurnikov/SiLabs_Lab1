@@ -1,0 +1,7 @@
+*.LST
+*.obj
+*.#*
+*.m51
+*.out
+lab1
+cyglink.txt
