@@ -57,6 +57,12 @@ sfr16 TMR3     = 0xCC;                    // Timer3 counter
                                     // oscillator / 8)
                                     // the internal oscillator has a
                                     // tolerance of +/- 2%
+#define DOT_CNT         3
+#define DASH_CNT        9
+#define DOT_PAUSE       3
+#define SPACE_PAUSE     12
+#define PAUSE_SYM       0xC000      //mask 2 higher bits in the sym_out, indicates pause required after symbol end
+
 sbit  LED = P1^6;                   // LED: '1' = ON; '0' = OFF
 
 typedef enum {SYM_START, LED_ON, PAUSE } SYM_STATE;
@@ -103,7 +109,7 @@ const unsigned int MORZE_CODE[SYM_NUM]=
 //-----------------------------------------------------------------------------
 // Global variables
 //-----------------------------------------------------------------------------
-volatile char sym_out = 0;
+volatile unsigned int sym_out = 0;
 //-----------------------------------------------------------------------------
 // Function Prototypes
 //-----------------------------------------------------------------------------
@@ -127,6 +133,10 @@ void main (void)
 	   if(morze_idx < 0 ) break;
        sym_out = MORZE_CODE[morze_idx];
        while(sym_out){
+	   _nop_();
+	   }
+       sym_out = PAUSE_SYM;
+	   while(sym_out){
 	   _nop_();
 	   }
 	   if(MORZE_CODE[morze_idx]=='.') break;
@@ -217,7 +227,7 @@ char char_to_idx(char c){
 
 	       rc = c - 0x41;
 
-	 } else if(c >= 0x61 && c <= 0x5A){
+	 } else if(c >= 0x61 && c <= 0x7A){
 
            rc = c - 0x61;
 
@@ -241,17 +251,19 @@ char char_to_idx(char c){
 // NOTE: The SFRPAGE register will automatically be switched to the Timer 3 Page
 // When an interrupt occurs.  SFRPAGE will return to its previous setting on exit
 // from this routine.
-#define DOT_CNT     3
-#define DASH_CNT    9
-#define DOT_PAUSE   3
-#define SPACE_PAUSE 12
+
 
 void Timer3_ISR (void) interrupt 14
 {
    static unsigned short int t3_cnt = 0;
    static SYM_STATE sm = SYM_START;
    TF3 = 0;
-
+   if(sym_out == PAUSE_SYM){
+       sym_out &= 0x8000;
+	   t3_cnt = SPACE_PAUSE;
+	   LED = 0;
+	   sm = PAUSE;
+   }
    switch ( sm ){
        case SYM_START:
 	       if(sym_out){
@@ -263,19 +275,24 @@ void Timer3_ISR (void) interrupt 14
        case LED_ON:
 	       if(!t3_cnt){
 		       sym_out >>= 2;
-		       t3_cnt = ( sym_out == 0) ? SPACE_PAUSE : DOT_PAUSE;
-			   sm = PAUSE;
-			   LED = 0; 
+			   if(sym_out){
+		           t3_cnt = DOT_PAUSE;
+			       sm = PAUSE;
+               } else {
+                   sm = SYM_START;
+			   }
+			   LED = 0;
 		   }
 	       break;
        case PAUSE:
 	       if(!t3_cnt){
-		       if(sym_out){
+		       if(sym_out & PAUSE_SYM){
+		          sym_out &= ~PAUSE_SYM;
+				  sm = SYM_START;
+			   } else if(sym_out){
 			       t3_cnt = (sym_out & 0x03 == 0x01) ? DOT_CNT : DASH_CNT;
 			       sm = LED_ON;
 		           LED = 1;
-			   } else {
-			       sm = SYM_START;
 			   }
 		   }
 	       break;
