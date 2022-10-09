@@ -185,8 +185,13 @@ void PORT_Init (void)
 
 
    XBR2 = 0x40;                        // Enable crossbar
-
+   //LED:
    P1MDOUT = 0x40;                     // : Port1 Output Mode Register. Set P1.6(LED) to push-pull
+   //button:
+   P3MDOUT = 0x00;                     // P3.7 is open-drain
+   P3     |= 0x80;                     // Set P3.7 latch to '1'
+
+
    SFRPAGE = SFRPAGE_SAVE;             // Restore SFR page
 
 }
