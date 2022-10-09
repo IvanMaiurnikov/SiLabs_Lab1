@@ -183,13 +183,12 @@ void PORT_Init (void)
 
    SFRPAGE = CONFIG_PAGE;              // set SFR page
 
-   XBR1 = 0x20;                        // T2 available in the pins
 
    XBR2 = 0x40;                        // Enable crossbar
 
-   P1MDOUT = 0x40;                     // Set P1.6(LED) to push-pull
-   P0MDOUT = 0x01;                     // Enable P0.0 as output
+   P1MDOUT = 0x40;                     // : Port1 Output Mode Register. Set P1.6(LED) to push-pull
    SFRPAGE = SFRPAGE_SAVE;             // Restore SFR page
+
 }
 
 //------------------------------------------------------------------------------------
